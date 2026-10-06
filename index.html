@@ -10,6 +10,25 @@
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
 
+    <script>
+      (function() {
+        try {
+          var origFetch = window.fetch ? window.fetch.bind(window) : null;
+          var _currentFetch = origFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return _currentFetch;
+            },
+            set: function(val) {
+              _currentFetch = val;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (_) {}
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,14 +38,19 @@
         --bg: #000;
         --fg: #fff;
         --pad-x: clamp(20px, 6.95vw, 120px);
+        --border-subtle: rgba(255, 255, 255, 0.12);
+        --border-active: rgba(255, 255, 255, 0.85);
       }
       *, *::before, *::after {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
       }
+      html {
+        scroll-behavior: smooth;
+      }
       html, body {
-        height: 100%;
+        min-height: 100%;
         background: #000;
         color: #fff;
         font-family: 'Poppins', sans-serif;
@@ -34,6 +58,7 @@
         overflow-x: hidden;
       }
 
+      /* HERO SECTION */
       .hero {
         position: relative;
         width: 100%;
@@ -220,24 +245,32 @@
       }
       .cta {
         flex: none;
-        padding: 0 15px;
+        padding: 0 18px;
         height: 48px;
         display: inline-flex;
         align-items: center;
+        gap: 8px;
         border: 1.5px solid rgba(255, 255, 255, .85);
         border-radius: 6px;
-        background: rgba(0, 0, 0, .15);
+        background: rgba(0, 0, 0, .25);
         color: #fff;
         font-size: 14px;
         font-weight: 400;
         text-decoration: none;
         cursor: pointer;
-        transition: background .25s, color .25s;
+        transition: background .25s, color .25s, transform .2s ease;
         backdrop-filter: blur(4px);
       }
       .cta:hover {
         background: #fff;
         color: #000;
+        transform: translateY(-2px);
+      }
+      .cta svg {
+        transition: transform .25s ease;
+      }
+      .cta:hover svg {
+        transform: translateY(2px);
       }
       .cta-line {
         flex: 1;
@@ -276,6 +309,408 @@
         pointer-events: none;
       }
 
+      /* PRODUCT SECTION STYLES */
+      .products-section,
+      .site-footer {
+        display: none !important;
+      }
+
+      .products-section.revealed {
+        display: flex !important;
+        animation: fadeInSection 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      .site-footer.revealed {
+        display: block !important;
+        animation: fadeInSection 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes fadeInSection {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .products-section {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        background: #000;
+        padding: clamp(60px, 10vh, 110px) var(--pad-x) clamp(60px, 8vh, 90px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .products-header {
+        max-width: 820px;
+        margin-bottom: clamp(36px, 5vh, 52px);
+      }
+      .section-tag {
+        display: inline-block;
+        font-size: 11px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 5px 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+      .section-title {
+        font-size: clamp(32px, 4.2vw, 56px);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+        margin-bottom: 14px;
+      }
+      .section-subtitle {
+        font-size: clamp(14px, 1.2vw, 17px);
+        font-weight: 300;
+        color: rgba(255, 255, 255, 0.7);
+        line-height: 1.6;
+      }
+
+      .product-showcase-container {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: clamp(24px, 4vw, 50px);
+        align-items: stretch;
+      }
+
+      /* Left Viewport */
+      .product-viewport-wrapper {
+        position: relative;
+        background: radial-gradient(circle at 50% 45%, rgba(30, 30, 35, 0.5) 0%, rgba(0, 0, 0, 0.95) 80%);
+        border: 1px solid var(--border-subtle);
+        border-radius: 14px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 520px;
+      }
+
+      #product-scene {
+        width: 100%;
+        height: 480px;
+        display: block;
+        cursor: grab;
+        touch-action: none;
+      }
+      #product-scene.dragging {
+        cursor: grabbing;
+      }
+
+      .viewport-hints {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: none;
+        z-index: 3;
+      }
+      .hint-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(8px);
+      }
+      .product-geometry-name {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        color: #fff;
+        backdrop-filter: blur(8px);
+      }
+
+      /* Product Navigation Bar */
+      .product-nav-bar {
+        margin-top: auto;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border-top: 1px solid var(--border-subtle);
+        background: rgba(10, 10, 10, 0.85);
+        backdrop-filter: blur(10px);
+        z-index: 4;
+      }
+      .prod-nav-btn {
+        padding: 14px 10px;
+        background: transparent;
+        border: none;
+        border-right: 1px solid var(--border-subtle);
+        color: rgba(255, 255, 255, 0.6);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        text-align: center;
+        transition: background .2s, color .2s;
+        outline: none;
+      }
+      .prod-nav-btn:last-child {
+        border-right: none;
+      }
+      .prod-nav-btn .p-num {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        opacity: 0.6;
+      }
+      .prod-nav-btn .p-title {
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+      }
+      .prod-nav-btn:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+      }
+      .prod-nav-btn.active {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        border-bottom: 2px solid #fff;
+      }
+      .prod-nav-btn.active .p-num {
+        opacity: 1;
+        color: #fff;
+      }
+
+      /* Right Details Card */
+      .product-details-card {
+        background: rgba(18, 18, 20, 0.65);
+        border: 1px solid var(--border-subtle);
+        border-radius: 14px;
+        padding: clamp(28px, 3.5vw, 42px);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        backdrop-filter: blur(12px);
+      }
+      .card-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .badge {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 4px 10px;
+        border-radius: 4px;
+      }
+      .prod-id {
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.5);
+        letter-spacing: 0.05em;
+      }
+      .prod-heading {
+        font-size: clamp(24px, 2.5vw, 36px);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        margin-bottom: 8px;
+        transition: opacity .3s;
+      }
+      .prod-lead {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.5;
+        margin-bottom: 18px;
+        font-weight: 400;
+      }
+      .prod-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.1);
+        margin-bottom: 18px;
+      }
+      .prod-body {
+        font-size: 13.5px;
+        color: rgba(255, 255, 255, 0.65);
+        line-height: 1.65;
+        font-weight: 300;
+        margin-bottom: 24px;
+      }
+
+      /* Specs Grid */
+      .specs-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .spec-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 12px 14px;
+        border-radius: 8px;
+      }
+      .spec-label {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
+      }
+      .spec-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      /* Tags */
+      .tags-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 28px;
+      }
+      .tag-pill {
+        font-size: 11px;
+        padding: 4px 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      /* Product Actions */
+      .product-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: auto;
+      }
+      .action-btn-primary {
+        flex: 1;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: #fff;
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .2s, transform .2s;
+      }
+      .action-btn-primary:hover {
+        background: #e5e5e5;
+        transform: translateY(-2px);
+      }
+      .action-btn-secondary {
+        height: 44px;
+        padding: 0 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: transparent;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 400;
+        cursor: pointer;
+        transition: background .2s, border-color .2s;
+      }
+      .action-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: #fff;
+      }
+
+      /* SITE FOOTER */
+      .site-footer {
+        background: #000;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: clamp(48px, 6vh, 70px) var(--pad-x) 32px;
+      }
+      .footer-inner {
+        display: grid;
+        grid-template-columns: 1.5fr 2fr;
+        gap: clamp(32px, 5vw, 64px);
+        margin-bottom: 40px;
+      }
+      .footer-brand .logo {
+        margin-bottom: 12px;
+      }
+      .footer-tagline {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.6);
+        max-width: 320px;
+        line-height: 1.6;
+        font-weight: 300;
+      }
+      .footer-links {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .f-col h4 {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 14px;
+        color: #fff;
+      }
+      .f-col a, .f-col span {
+        display: block;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.65);
+        text-decoration: none;
+        margin-bottom: 8px;
+        line-height: 1.5;
+        transition: color .2s;
+      }
+      .f-col a:hover {
+        color: #fff;
+      }
+      .footer-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-top: 24px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .back-to-top {
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        transition: color .2s;
+      }
+      .back-to-top:hover {
+        color: #fff;
+      }
+
       /* RESPONSIVE */
       @media (max-width: 900px), (max-aspect-ratio: 1/1) {
         .arrows {
@@ -297,6 +732,18 @@
         }
         .count {
           font-size: clamp(120px, 22vw, 200px);
+        }
+        .product-showcase-container {
+          grid-template-columns: 1fr;
+        }
+        #product-scene {
+          height: 380px;
+        }
+        .footer-inner {
+          grid-template-columns: 1fr;
+        }
+        .footer-links {
+          grid-template-columns: repeat(2, 1fr);
         }
       }
       @media (max-width: 640px) {
@@ -320,6 +767,23 @@
         .count {
           font-size: 120px;
         }
+        .product-nav-bar {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .prod-nav-btn {
+          border-bottom: 1px solid var(--border-subtle);
+        }
+        .specs-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-links {
+          grid-template-columns: 1fr;
+        }
+        .footer-bottom {
+          flex-direction: column;
+          gap: 10px;
+          text-align: center;
+        }
       }
       @media (max-width: 420px) {
         .nav-links li:nth-child(2) {
@@ -338,13 +802,18 @@
     </script>
   </head>
   <body>
+    <!-- HERO SECTION -->
     <section class="hero" id="hero">
       <canvas id="scene" aria-label="Rotatable glass cube. Drag to rotate."></canvas>
       <div class="ui">
         <h1 class="sr-only">Investigación Desarrollo Innovación</h1>
         <header class="nav">
-          <a href="#" class="logo"><i class="logo-mark"></i><b>Area </b><span>IDI</span></a>
-          <ul class="nav-links"><li><a href="#">Inicio</a></li><li><a href="#">Portafolio</a></li><li><a href="#">Contactanos</a></li></ul>
+          <a href="#hero" class="logo"><i class="logo-mark"></i><b>Area </b><span>IDI</span></a>
+          <ul class="nav-links">
+            <li><a href="#hero">Inicio</a></li>
+            <li><a href="#productos">Portafolio</a></li>
+            <li><a href="#contacto">Contactanos</a></li>
+          </ul>
         </header>
         <div class="arrows">
           <button class="arrow" id="prev" aria-label="Previous view">
@@ -365,7 +834,12 @@
         </nav>
         <p class="tagline">Let's Build the<br>Future of <strong>Creation.</strong></p>
         <div class="cta-row">
-          <a href="#" class="cta">Inicia la Exploración</a>
+          <a href="#productos" class="cta" id="cta-explore">
+            <span>Inicia la Exploración</span>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14M19 12l-7 7-7-7"/>
+            </svg>
+          </a>
           <span class="cta-line"></span>
           <span class="count" aria-hidden="true">07</span>
         </div>
@@ -373,96 +847,138 @@
       </div>
     </section>
 
+    <!-- PRODUCTOS DE CREACIÓN SECTION -->
+    <section class="products-section" id="productos">
+      <div class="products-header">
+        <span class="section-tag">PRODUCTOS NUEVOS // AREA IDI</span>
+        <h2 class="section-title">Productos de Creación</h2>
+        <p class="section-subtitle">Arquitecturas experimentales donde cada forma óptica refracta y modula la información en tiempo real. Interactúa libremente con cada pieza en 3D.</p>
+      </div>
+
+      <div class="product-showcase-container">
+        <!-- Left: 3D Interactive Viewport -->
+        <div class="product-viewport-wrapper">
+          <div class="viewport-hints">
+            <span class="hint-pill">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                <path d="M16 21h5v-5"/>
+              </svg>
+              Arrastra para rotar 3D
+            </span>
+            <span class="product-geometry-name" id="geo-badge">Forma: Nodo Toroidal Knot</span>
+          </div>
+
+          <canvas id="product-scene" aria-label="Modelo 3D interactivo del producto de creación. Arrastra para rotar."></canvas>
+
+          <!-- Product Tabs -->
+          <div class="product-nav-bar" id="prod-nav-bar">
+            <button class="prod-nav-btn active" data-index="0">
+              <span class="p-num">01</span>
+              <span class="p-title">Elegancia Rosado Perlado</span>
+            </button>
+            <button class="prod-nav-btn" data-index="1">
+              <span class="p-num">02</span>
+              <span class="p-title">Prisma Cuántico</span>
+            </button>
+            <button class="prod-nav-btn" data-index="2">
+              <span class="p-num">03</span>
+              <span class="p-title">Vórtice Toroidal</span>
+            </button>
+            <button class="prod-nav-btn" data-index="3">
+              <span class="p-num">04</span>
+              <span class="p-title">Esfera Coherencia</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Description & Technical Specs -->
+        <div class="product-details-card">
+          <div>
+            <div class="card-meta">
+              <span class="badge" id="prod-category">Familia Elegancia</span>
+              <span class="prod-id" id="prod-id">01 / 04</span>
+            </div>
+
+            <h3 class="prod-heading" id="prod-title">Elegancia Rosado Perlado</h3>
+            <p class="prod-lead" id="prod-lead">Cuadro conmemorativo personalizado de graduación, diseñado para preservar fotografías y recuerdos especiales de una etapa escolar.</p>
+
+            <div class="prod-divider"></div>
+
+            <p class="prod-body" id="prod-description">
+              Sistema de exhibición fotográfica personalizado, compuesto por una estructura de MDF, elementos decorativos, fotografía impresa y acabado frontal, diseñado para conservar y presentar recuerdos de graduación con una composición elegante y duradera
+            </p>
+
+            <div class="specs-grid" id="prod-specs">
+              <!-- Rendered via JS -->
+            </div>
+
+            <div class="tags-cloud" id="prod-tags">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <div class="product-actions">
+            <button class="action-btn-primary" id="btn-spin-product">
+              <span>Girar 90°</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+            </button>
+            <button class="action-btn-secondary" id="btn-next-product">
+              <span>Siguiente Producto &rarr;</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER / CONTACTO SECTION -->
+    <footer class="site-footer" id="contacto">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#hero" class="logo"><i class="logo-mark"></i><b>Area </b><span>IDI</span></a>
+          <p class="footer-tagline">Investigación, Desarrollo e Innovación continua para la creación de tecnologías de vanguardia.</p>
+        </div>
+        <div class="footer-links">
+          <div class="f-col">
+            <h4>Navegación</h4>
+            <a href="#hero">Inicio</a>
+            <a href="#productos">Portafolio</a>
+            <a href="#contacto">Contacto</a>
+          </div>
+          <div class="f-col">
+            <h4>Laboratorio</h4>
+            <span>Área de I+D+i</span>
+            <span>División Óptica Cuántica</span>
+            <span>Madrid / Barcelona / Remoto</span>
+          </div>
+          <div class="f-col">
+            <h4>Contacto Directo</h4>
+            <a href="mailto:info@areaidi.com">info@areaidi.com</a>
+            <a href="tel:+34900123456">+34 900 123 456</a>
+            <span>Lunes a Viernes, 9:00 - 18:00 CET</span>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Area IDI. Todos los derechos reservados.</p>
+        <a href="#hero" class="back-to-top">Subir al Inicio &uarr;</a>
+      </div>
+    </footer>
+
+    <!-- MAIN SCRIPT -->
     <script type="module">
       import * as THREE from 'three';
       import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
       import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
       import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-      const MODEL_URL = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260929_212926_92423081-b0e4-4f5a-b650-14af6c05c058.glb';
-
-      const canvas = document.getElementById('scene');
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: true,
-        alpha: false
-      });
-      renderer.setClearColor(0x000000, 1.0);
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-      const initialDpr = Math.min(window.devicePixelRatio || 1, 2);
-      renderer.setPixelRatio(initialDpr);
-
-      const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 100);
-      camera.position.set(0, 0, 10);
-      camera.lookAt(0, 0, 0);
-
-      // Offscreen canvas for background text
-      const bgCanvas = document.createElement('canvas');
-      const bgCtx = bgCanvas.getContext('2d');
-      const bgTexture = new THREE.CanvasTexture(bgCanvas);
-      bgTexture.colorSpace = THREE.SRGBColorSpace;
-      bgTexture.minFilter = THREE.LinearFilter;
-      bgTexture.magFilter = THREE.LinearFilter;
-      bgTexture.generateMipmaps = false;
-
-      // Fullscreen quad in bgScene
-      const bgScene = new THREE.Scene();
-      const bgQuadMat = new THREE.ShaderMaterial({
-        uniforms: {
-          uTex: { value: bgTexture }
-        },
-        vertexShader: `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = vec4(position.xy, 0.0, 1.0);
-          }
-        `,
-        fragmentShader: `
-          uniform sampler2D uTex;
-          varying vec2 vUv;
-          void main() {
-            gl_FragColor = texture2D(uTex, vUv);
-            #include <colorspace_fragment>
-          }
-        `,
-        depthTest: false,
-        depthWrite: false
-      });
-      const bgQuadGeo = new THREE.PlaneGeometry(2, 2);
-      const bgQuadMesh = new THREE.Mesh(bgQuadGeo, bgQuadMat);
-      bgQuadMesh.frustumCulled = false;
-      bgScene.add(bgQuadMesh);
-
-      // Main 3D scene
-      const scene = new THREE.Scene();
-      const pivot = new THREE.Group();
-      const spinner = new THREE.Group();
-      pivot.add(spinner);
-      scene.add(pivot);
-
-      // Initial rotation
-      spinner.quaternion.setFromEuler(new THREE.Euler(-0.42, 0.62, 0.18));
-
-      // Render Targets
-      let curW = window.innerWidth;
-      let curH = window.innerHeight;
-      let curDpr = Math.min(window.devicePixelRatio || 1, 2);
-      let curWDpr = Math.round(curW * curDpr);
-      let curHDpr = Math.round(curH * curDpr);
-
-      const rtBack = new THREE.WebGLRenderTarget(curWDpr, curHDpr, {
-        type: THREE.HalfFloatType,
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter
-      });
-      const rtFront = new THREE.WebGLRenderTarget(curWDpr, curHDpr, {
-        type: THREE.HalfFloatType,
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.LinearFilter
-      });
-
-      // Glass Material Shaders
+      /* ========================================================
+         SHARED SHADER DEFINITIONS FOR CHROMATIC GLASS REFRACTION
+         ======================================================== */
       const glassVertexShader = `
         varying vec3 vNormal;
         varying vec3 vEye;
@@ -569,6 +1085,91 @@
         }
       `;
 
+      /* ========================================================
+         1. HERO SECTION WEBGL SETUP
+         ======================================================== */
+      const MODEL_URL = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260929_212926_92423081-b0e4-4f5a-b650-14af6c05c058.glb';
+
+      const canvas = document.getElementById('scene');
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: false
+      });
+      renderer.setClearColor(0x000000, 1.0);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      const initialDpr = Math.min(window.devicePixelRatio || 1, 2);
+      renderer.setPixelRatio(initialDpr);
+
+      const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 0, 10);
+      camera.lookAt(0, 0, 0);
+
+      // Offscreen canvas for background text
+      const bgCanvas = document.createElement('canvas');
+      const bgCtx = bgCanvas.getContext('2d');
+      const bgTexture = new THREE.CanvasTexture(bgCanvas);
+      bgTexture.colorSpace = THREE.SRGBColorSpace;
+      bgTexture.minFilter = THREE.LinearFilter;
+      bgTexture.magFilter = THREE.LinearFilter;
+      bgTexture.generateMipmaps = false;
+
+      // Fullscreen quad in bgScene
+      const bgScene = new THREE.Scene();
+      const bgQuadMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTex: { value: bgTexture }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position.xy, 0.0, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D uTex;
+          varying vec2 vUv;
+          void main() {
+            gl_FragColor = texture2D(uTex, vUv);
+            #include <colorspace_fragment>
+          }
+        `,
+        depthTest: false,
+        depthWrite: false
+      });
+      const bgQuadGeo = new THREE.PlaneGeometry(2, 2);
+      const bgQuadMesh = new THREE.Mesh(bgQuadGeo, bgQuadMat);
+      bgQuadMesh.frustumCulled = false;
+      bgScene.add(bgQuadMesh);
+
+      // Main 3D scene
+      const scene = new THREE.Scene();
+      const pivot = new THREE.Group();
+      const spinner = new THREE.Group();
+      pivot.add(spinner);
+      scene.add(pivot);
+
+      spinner.quaternion.setFromEuler(new THREE.Euler(-0.42, 0.62, 0.18));
+
+      // Render Targets
+      let curW = window.innerWidth;
+      let curH = window.innerHeight;
+      let curDpr = Math.min(window.devicePixelRatio || 1, 2);
+      let curWDpr = Math.round(curW * curDpr);
+      let curHDpr = Math.round(curH * curDpr);
+
+      const rtBack = new THREE.WebGLRenderTarget(curWDpr, curHDpr, {
+        type: THREE.HalfFloatType,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter
+      });
+      const rtFront = new THREE.WebGLRenderTarget(curWDpr, curHDpr, {
+        type: THREE.HalfFloatType,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter
+      });
+
       const sharedUniforms = {
         uResolution: { value: new THREE.Vector2(curWDpr, curHDpr) },
         uIorR: { value: 1.15 },
@@ -609,7 +1210,6 @@
         side: THREE.FrontSide
       });
 
-      // Initial cube mesh with fallback geometry
       let cubeGeo = new RoundedBoxGeometry(1, 1, 1, 8, 0.12);
       const cubeMesh = new THREE.Mesh(cubeGeo, frontMat);
       spinner.add(cubeMesh);
@@ -628,6 +1228,186 @@
       }
 
       prepareGeometry(cubeGeo);
+
+      /* ========================================================
+         HERO TRAILING PARTICLE SYSTEM (SEPARATE SCENE & INSTANCEDMESH)
+         ======================================================== */
+      const PARTICLE_COUNT = 90;
+      const particleScene = new THREE.Scene();
+
+      function createParticleTexture() {
+        const c = document.createElement('canvas');
+        c.width = 48;
+        c.height = 48;
+        const ctx = c.getContext('2d');
+        const g = ctx.createRadialGradient(24, 24, 0, 24, 24, 24);
+        g.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        g.addColorStop(0.25, 'rgba(235, 245, 255, 0.75)');
+        g.addColorStop(0.6, 'rgba(180, 215, 255, 0.2)');
+        g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 48, 48);
+        const tex = new THREE.CanvasTexture(c);
+        tex.generateMipmaps = false;
+        tex.minFilter = THREE.LinearFilter;
+        return tex;
+      }
+
+      const particleGeo = new THREE.PlaneGeometry(0.12, 0.12);
+      const particleMat = new THREE.MeshBasicMaterial({
+        map: createParticleTexture(),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: false
+      });
+
+      const particleInstancedMesh = new THREE.InstancedMesh(particleGeo, particleMat, PARTICLE_COUNT);
+      particleInstancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      particleScene.add(particleInstancedMesh);
+
+      const particles = [];
+      const pDummy = new THREE.Object3D();
+      const pTempColor = new THREE.Color();
+
+      const P_PALETTE = [
+        new THREE.Color(0.9, 0.96, 1.0),
+        new THREE.Color(0.5, 0.8, 1.0),
+        new THREE.Color(0.78, 0.6, 1.0),
+        new THREE.Color(1.0, 0.88, 0.65)
+      ];
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push({
+          active: false,
+          x: 0,
+          y: 0,
+          z: 0,
+          vx: 0,
+          vy: 0,
+          vz: 0,
+          age: 0,
+          life: 1.0,
+          baseScale: 0.1,
+          color: new THREE.Color()
+        });
+        pDummy.position.set(9999, 9999, 9999);
+        pDummy.scale.set(0, 0, 0);
+        pDummy.updateMatrix();
+        particleInstancedMesh.setMatrixAt(i, pDummy.matrix);
+        particleInstancedMesh.setColorAt(i, new THREE.Color(0, 0, 0));
+      }
+      particleInstancedMesh.instanceMatrix.needsUpdate = true;
+      if (particleInstancedMesh.instanceColor) particleInstancedMesh.instanceColor.needsUpdate = true;
+
+      let particleHead = 0;
+
+      function spawnParticle(worldX, worldY) {
+        const p = particles[particleHead];
+        particleHead = (particleHead + 1) % PARTICLE_COUNT;
+
+        p.active = true;
+        p.x = worldX + (Math.random() - 0.5) * 0.08;
+        p.y = worldY + (Math.random() - 0.5) * 0.08;
+        p.z = (Math.random() - 0.5) * 0.3;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.06 + Math.random() * 0.14;
+        p.vx = Math.cos(angle) * speed;
+        p.vy = Math.sin(angle) * speed + 0.04;
+        p.vz = (Math.random() - 0.5) * 0.05;
+
+        p.age = 0;
+        p.life = 0.75 + Math.random() * 0.45;
+        p.baseScale = 0.7 + Math.random() * 0.5;
+        p.color.copy(P_PALETTE[Math.floor(Math.random() * P_PALETTE.length)]);
+      }
+
+      function updateParticles(dt) {
+        let needsMatrixUpdate = false;
+        let needsColorUpdate = false;
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const p = particles[i];
+          if (!p.active) continue;
+
+          p.age += dt;
+          if (p.age >= p.life) {
+            p.active = false;
+            pDummy.position.set(9999, 9999, 9999);
+            pDummy.scale.set(0, 0, 0);
+            pDummy.updateMatrix();
+            particleInstancedMesh.setMatrixAt(i, pDummy.matrix);
+            needsMatrixUpdate = true;
+            continue;
+          }
+
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.z += p.vz * dt;
+          p.vx *= 0.94;
+          p.vy *= 0.94;
+
+          const progress = p.age / p.life;
+          const scaleProg = Math.sin(progress * Math.PI);
+          const currentScale = p.baseScale * scaleProg;
+
+          pDummy.position.set(p.x, p.y, p.z);
+          pDummy.scale.set(currentScale, currentScale, currentScale);
+          pDummy.updateMatrix();
+          particleInstancedMesh.setMatrixAt(i, pDummy.matrix);
+          needsMatrixUpdate = true;
+
+          const fade = Math.pow(1.0 - progress, 1.4);
+          pTempColor.copy(p.color).multiplyScalar(fade * 0.85);
+          particleInstancedMesh.setColorAt(i, pTempColor);
+          needsColorUpdate = true;
+        }
+
+        if (needsMatrixUpdate) particleInstancedMesh.instanceMatrix.needsUpdate = true;
+        if (needsColorUpdate && particleInstancedMesh.instanceColor) particleInstancedMesh.instanceColor.needsUpdate = true;
+      }
+
+      let lastHeroPointerX = 0;
+      let lastHeroPointerY = 0;
+      let heroHasPointerMoved = false;
+
+      window.addEventListener('pointermove', (e) => {
+        if (!isHeroVisible) return;
+        const heroEl = document.getElementById('hero');
+        if (!heroEl) return;
+        const rect = heroEl.getBoundingClientRect();
+        if (e.clientY < rect.top || e.clientY > rect.bottom) return;
+
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const fovRad = (camera.fov * Math.PI) / 180;
+        const visH = 2 * Math.tan(fovRad / 2) * 10;
+        const visW = visH * camera.aspect;
+
+        const normX = (e.clientX / W) * 2 - 1;
+        const normY = -(e.clientY / H) * 2 + 1;
+        const worldX = (normX * visW) / 2;
+        const worldY = (normY * visH) / 2;
+
+        if (!heroHasPointerMoved) {
+          heroHasPointerMoved = true;
+          lastHeroPointerX = e.clientX;
+          lastHeroPointerY = e.clientY;
+          spawnParticle(worldX, worldY);
+          return;
+        }
+
+        const dist = Math.hypot(e.clientX - lastHeroPointerX, e.clientY - lastHeroPointerY);
+        if (dist > 7) {
+          const spawnCount = Math.min(3, Math.max(1, Math.floor(dist / 14)));
+          for (let k = 0; k < spawnCount; k++) {
+            spawnParticle(worldX, worldY);
+          }
+          lastHeroPointerX = e.clientX;
+          lastHeroPointerY = e.clientY;
+        }
+      }, { passive: true });
 
       // Load model
       const gltfLoader = new GLTFLoader();
@@ -721,8 +1501,8 @@
         });
       }
 
-      // Layout update
-      function layout() {
+      // Hero Layout update
+      function layoutHero() {
         const W = window.innerWidth;
         const H = window.innerHeight;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -743,7 +1523,6 @@
 
         drawHeadline();
 
-        // 4c: Cube placement
         const mobile = (W < 768) || (W / H < 1);
         const fovRad = (camera.fov * Math.PI) / 180;
         const visH = 2 * Math.tan(fovRad / 2) * 10;
@@ -758,9 +1537,7 @@
         pivot.scale.set(s, s, s);
       }
 
-      window.addEventListener('resize', layout);
-
-      // Interaction
+      // Hero Interaction
       let isDragging = false;
       let lastPointerX = 0;
       let lastPointerY = 0;
@@ -818,7 +1595,6 @@
       canvas.addEventListener('pointerup', onPointerEnd);
       canvas.addEventListener('pointercancel', onPointerEnd);
 
-      // Buttons
       document.getElementById('prev')?.addEventListener('click', () => {
         remainingArrowAngle -= Math.PI / 2;
         velX = 0;
@@ -843,7 +1619,493 @@
         });
       });
 
-      // Animation Loop
+      /* ========================================================
+         2. PRODUCT SHOWCASE DATA & INTERACTIVE 3D VIEWER
+         ======================================================== */
+      const PRODUCTS = [
+        {
+          id: "01",
+          total: "04",
+          title: "Elegancia Rosado Perlado",
+          category: "Familia Elegancia",
+          lead: "Cuadro conmemorativo personalizado de graduación, diseñado para preservar fotografías y recuerdos especiales de una etapa escolar.",
+          description: "Sistema de exhibición fotográfica personalizado, compuesto por una estructura de MDF, elementos decorativos, fotografía impresa y acabado frontal, diseñado para conservar y presentar recuerdos de graduación con una composición elegante y duradera",
+          badge: "Acabado: Rosado Perlado",
+          geomType: "knot",
+          specs: [
+            { label: "Medida del Producto", value: "50 cm x 65.5 cm" },
+            { label: "Espesor del Producto", value: "22 mm" },
+            { label: "Medida de Fotografía", value: "30 x 45 cm" },
+            { label: "Peso del Producto", value: "14 kg" }
+          ],
+          tags: ["Cuadro Conmemorativo", "Graduación", "Estructura MDF", "Rosado Perlado"]
+        },
+        {
+          id: "02",
+          total: "04",
+          title: "Prisma Cuántico",
+          category: "SEGURIDAD & CRIPTOGRAFÍA",
+          lead: "Cuboide de refracción estocástica para cifrado cuántico impenetrable.",
+          description: "Matriz cúbica de cristal borosilicatado tratada con dopaje iónico selectivo. Descompone haces de fotones en canales entrelazados que colapsan ante cualquier intento de interceptación, garantizando comunicaciones inviolables.",
+          badge: "Forma: Cuboide Espectral",
+          geomType: "box",
+          specs: [
+            { label: "Entrelazamiento", value: "99.98% Fidelidad" },
+            { label: "Canales Espectrales", value: "6 Longitudes" },
+            { label: "Pureza Óptica", value: "99.999%" },
+            { label: "Resonancia", value: "450 - 780 nm" }
+          ],
+          tags: ["Criptografía QKD", "Dopaje Iónico", "Cuboide Óptico", "Defensa Avanzada"]
+        },
+        {
+          id: "03",
+          total: "04",
+          title: "Vórtice Dimensional",
+          category: "SÍNTESIS DE MATERIALES",
+          lead: "Toroide de confinamiento hiperbólico para manufactura en microgravedad.",
+          description: "Estructura toroidal continua diseñada para estabilizar plasmas fríos y campos electromagnéticos convergentes. Facilita sintetizar metamateriales con índices de refracción negativos para aplicaciones aeroespaciales.",
+          badge: "Forma: Toroide Simétrico",
+          geomType: "torus",
+          specs: [
+            { label: "Campo Magnético", value: "14.8 Tesla" },
+            { label: "Gradiente Térmico", value: "2400 K/s" },
+            { label: "Estabilidad de Fase", value: "99.94%" },
+            { label: "Tasa Síntesis", value: "1.2 g/min" }
+          ],
+          tags: ["Metamateriales", "Geometría Toroidal", "Plasma Frío", "Índice Negativo"]
+        },
+        {
+          id: "04",
+          total: "04",
+          title: "Esfera de Coherencia",
+          category: "METROLOGÍA DE PRECISIÓN",
+          lead: "Resonador icosaédrico para sensado gravitacional y sincronicidad cuántica.",
+          description: "Cuerpo poliédrico de cuarzo sintético ultrapuro facetado con tolerancia subnanométrica. Monitorea variaciones infinitesimales de fase y gravedad local mediante interferometría de retrodispersión cromática.",
+          badge: "Forma: Icosaedro Multifacético",
+          geomType: "icosahedron",
+          specs: [
+            { label: "Sensibilidad", value: "10^-19 m" },
+            { label: "Q-Factor Óptico", value: "1.8 × 10^9" },
+            { label: "Deriva Térmica", value: "< 2 nK/h" },
+            { label: "Facetas Ópticas", value: "20 Planos" }
+          ],
+          tags: ["Sensado Gravitacional", "Interferometría", "Ultra-Alta Q", "Cuarzo Puro"]
+        }
+      ];
+
+      let currentProductIndex = 0;
+
+      // Product Canvas & 3D WebGL Setup
+      const prodCanvas = document.getElementById('product-scene');
+      const prodRenderer = new THREE.WebGLRenderer({
+        canvas: prodCanvas,
+        antialias: true,
+        alpha: false
+      });
+      prodRenderer.setClearColor(0x000000, 1.0);
+      prodRenderer.outputColorSpace = THREE.SRGBColorSpace;
+      prodRenderer.setPixelRatio(initialDpr);
+
+      const prodCamera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+      prodCamera.position.set(0, 0, 5.8);
+      prodCamera.lookAt(0, 0, 0);
+
+      // Product Background Text Canvas
+      const prodBgCanvas = document.createElement('canvas');
+      const prodBgCtx = prodBgCanvas.getContext('2d');
+      const prodBgTexture = new THREE.CanvasTexture(prodBgCanvas);
+      prodBgTexture.colorSpace = THREE.SRGBColorSpace;
+      prodBgTexture.minFilter = THREE.LinearFilter;
+      prodBgTexture.magFilter = THREE.LinearFilter;
+      prodBgTexture.generateMipmaps = false;
+
+      const prodBgScene = new THREE.Scene();
+      const prodBgQuadMat = new THREE.ShaderMaterial({
+        uniforms: { uTex: { value: prodBgTexture } },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position.xy, 0.0, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D uTex;
+          varying vec2 vUv;
+          void main() {
+            gl_FragColor = texture2D(uTex, vUv);
+            #include <colorspace_fragment>
+          }
+        `,
+        depthTest: false,
+        depthWrite: false
+      });
+      const prodBgMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), prodBgQuadMat);
+      prodBgMesh.frustumCulled = false;
+      prodBgScene.add(prodBgMesh);
+
+      // Product 3D Scene
+      const prodScene = new THREE.Scene();
+      const prodPivot = new THREE.Group();
+      const prodSpinner = new THREE.Group();
+      prodPivot.add(prodSpinner);
+      prodScene.add(prodPivot);
+      prodSpinner.quaternion.setFromEuler(new THREE.Euler(-0.35, 0.55, 0.12));
+
+      // Make 3D product elements noticeably larger in the viewer
+      prodPivot.scale.set(1.85, 1.85, 1.85);
+
+      // Product Render Targets
+      const prodRtBack = new THREE.WebGLRenderTarget(512, 512, {
+        type: THREE.HalfFloatType,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter
+      });
+      const prodRtFront = new THREE.WebGLRenderTarget(512, 512, {
+        type: THREE.HalfFloatType,
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter
+      });
+
+      const prodSharedUniforms = {
+        uResolution: { value: new THREE.Vector2(512, 512) },
+        uIorR: { value: 1.15 },
+        uIorY: { value: 1.16 },
+        uIorG: { value: 1.18 },
+        uIorC: { value: 1.22 },
+        uIorB: { value: 1.22 },
+        uIorP: { value: 1.22 },
+        uChromatic: { value: 0.55 },
+        uSaturation: { value: 1.1 },
+        uShininess: { value: 85.0 },
+        uDiffuseness: { value: 0.02 },
+        uFresnelPower: { value: 5.0 },
+        uLight: { value: new THREE.Vector3(-1.0, 1.2, 1.0) }
+      };
+
+      const prodBackMat = new THREE.ShaderMaterial({
+        vertexShader: glassVertexShader,
+        fragmentShader: glassFragmentShader,
+        uniforms: {
+          ...prodSharedUniforms,
+          uTexture: { value: prodRtBack.texture },
+          uRefractPower: { value: 0.24 },
+          uBackside: { value: 1.0 }
+        },
+        side: THREE.BackSide
+      });
+
+      const prodFrontMat = new THREE.ShaderMaterial({
+        vertexShader: glassVertexShader,
+        fragmentShader: glassFragmentShader,
+        uniforms: {
+          ...prodSharedUniforms,
+          uTexture: { value: prodRtFront.texture },
+          uRefractPower: { value: 0.32 },
+          uBackside: { value: 0.0 }
+        },
+        side: THREE.FrontSide
+      });
+
+      // Product Geometries
+      const GEOMETRIES = {
+        knot: prepareGeometry(new THREE.TorusKnotGeometry(0.85, 0.28, 128, 32, 2, 3)),
+        box: prepareGeometry(new RoundedBoxGeometry(1.4, 1.4, 1.4, 8, 0.22)),
+        torus: prepareGeometry(new THREE.TorusGeometry(1.05, 0.45, 36, 80)),
+        icosahedron: prepareGeometry(new THREE.IcosahedronGeometry(1.3, 1))
+      };
+
+      const productMesh = new THREE.Mesh(GEOMETRIES.knot, prodFrontMat);
+      prodSpinner.add(productMesh);
+
+      // Draw Product Studio Lighting / Aura Backdrop (without text clutter)
+      function drawProductBgText() {
+        const rect = prodCanvas.getBoundingClientRect();
+        const W = rect.width || 600;
+        const H = rect.height || 480;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        prodBgCanvas.width = Math.round(W * dpr);
+        prodBgCanvas.height = Math.round(H * dpr);
+
+        prodBgCtx.save();
+        prodBgCtx.scale(dpr, dpr);
+
+        // Pitch black deep space canvas
+        prodBgCtx.fillStyle = '#000000';
+        prodBgCtx.fillRect(0, 0, W, H);
+
+        // Soft luminous studio aura in the center for chromatic dispersion refraction
+        const cx = W * 0.5;
+        const cy = H * 0.5;
+        const rad = Math.min(W, H) * 0.65;
+        const grad = prodBgCtx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.55)');
+        grad.addColorStop(0.25, 'rgba(210, 230, 255, 0.35)');
+        grad.addColorStop(0.55, 'rgba(130, 165, 235, 0.14)');
+        grad.addColorStop(0.82, 'rgba(60, 90, 160, 0.04)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        prodBgCtx.fillStyle = grad;
+        prodBgCtx.beginPath();
+        prodBgCtx.arc(cx, cy, rad, 0, Math.PI * 2);
+        prodBgCtx.fill();
+
+        // Subtle optical concentric rings for specular depth
+        prodBgCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        prodBgCtx.lineWidth = 1;
+        prodBgCtx.beginPath();
+        prodBgCtx.arc(cx, cy, rad * 0.35, 0, Math.PI * 2);
+        prodBgCtx.arc(cx, cy, rad * 0.65, 0, Math.PI * 2);
+        prodBgCtx.stroke();
+
+        prodBgCtx.restore();
+        prodBgTexture.needsUpdate = true;
+      }
+
+      // Layout Product Viewer
+      function layoutProductViewer() {
+        const rect = prodCanvas.getBoundingClientRect();
+        const W = rect.width || 600;
+        const H = rect.height || 480;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        prodRenderer.setSize(W, H);
+        prodRenderer.setPixelRatio(dpr);
+
+        prodCamera.aspect = W / H;
+        prodCamera.updateProjectionMatrix();
+
+        const wDpr = Math.round(W * dpr);
+        const hDpr = Math.round(H * dpr);
+        prodRtBack.setSize(wDpr, hDpr);
+        prodRtFront.setSize(wDpr, hDpr);
+
+        prodBackMat.uniforms.uResolution.value.set(wDpr, hDpr);
+        prodFrontMat.uniforms.uResolution.value.set(wDpr, hDpr);
+
+        // Maintain large prominent 3D presence across viewports
+        const isNarrow = W < 600;
+        const scaleVal = isNarrow ? 1.6 : 1.85;
+        prodPivot.scale.set(scaleVal, scaleVal, scaleVal);
+
+        drawProductBgText();
+      }
+
+      // Product Drag Interaction
+      let prodDragging = false;
+      let prodLastX = 0;
+      let prodLastY = 0;
+      let prodVelX = 0;
+      let prodVelY = 0;
+      let prodIdleBlend = 1.0;
+      let prodTimeSinceInteraction = 10.0;
+      let prodRemainingSpin = 0;
+
+      prodCanvas.addEventListener('pointerdown', (e) => {
+        prodDragging = true;
+        prodLastX = e.clientX;
+        prodLastY = e.clientY;
+        prodVelX = 0;
+        prodVelY = 0;
+        prodRemainingSpin = 0;
+        prodTimeSinceInteraction = 0;
+        prodIdleBlend = 0;
+        try {
+          prodCanvas.setPointerCapture(e.pointerId);
+        } catch (_) {}
+        prodCanvas.classList.add('dragging');
+      });
+
+      prodCanvas.addEventListener('pointermove', (e) => {
+        if (!prodDragging) return;
+        const deltaX = e.clientX - prodLastX;
+        const deltaY = e.clientY - prodLastY;
+        prodLastX = e.clientX;
+        prodLastY = e.clientY;
+
+        const dx = deltaX * 0.008;
+        const dy = deltaY * 0.008;
+
+        const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx);
+        const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy);
+        prodSpinner.quaternion.premultiply(qY);
+        prodSpinner.quaternion.premultiply(qX);
+
+        prodVelX = dx;
+        prodVelY = dy;
+        prodTimeSinceInteraction = 0;
+      });
+
+      function onProdPointerEnd(e) {
+        if (!prodDragging) return;
+        prodDragging = false;
+        try {
+          prodCanvas.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+        prodCanvas.classList.remove('dragging');
+        prodTimeSinceInteraction = 0;
+      }
+
+      prodCanvas.addEventListener('pointerup', onProdPointerEnd);
+      prodCanvas.addEventListener('pointercancel', onProdPointerEnd);
+
+      // Spin Product 90 deg
+      document.getElementById('btn-spin-product')?.addEventListener('click', () => {
+        prodRemainingSpin += Math.PI / 2;
+        prodVelX = 0;
+        prodVelY = 0;
+        prodTimeSinceInteraction = 0;
+        prodIdleBlend = 0;
+      });
+
+      // Update UI for selected product
+      function selectProduct(index) {
+        currentProductIndex = (index + PRODUCTS.length) % PRODUCTS.length;
+        const prod = PRODUCTS[currentProductIndex];
+
+        // Update tabs
+        document.querySelectorAll('#prod-nav-bar .prod-nav-btn').forEach((btn, idx) => {
+          if (idx === currentProductIndex) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+
+        // Update Text
+        document.getElementById('prod-category').textContent = prod.category;
+        document.getElementById('prod-id').textContent = `${prod.id} / ${prod.total}`;
+        document.getElementById('prod-title').textContent = prod.title;
+        document.getElementById('prod-lead').textContent = prod.lead;
+        document.getElementById('prod-description').textContent = prod.description;
+        document.getElementById('geo-badge').textContent = prod.badge;
+
+        // Update Specs
+        const specsContainer = document.getElementById('prod-specs');
+        if (specsContainer) {
+          specsContainer.innerHTML = prod.specs.map(s => `
+            <div class="spec-item">
+              <div class="spec-label">${s.label}</div>
+              <div class="spec-value">${s.value}</div>
+            </div>
+          `).join('');
+        }
+
+        // Update Tags
+        const tagsContainer = document.getElementById('prod-tags');
+        if (tagsContainer) {
+          tagsContainer.innerHTML = prod.tags.map(t => `<span class="tag-pill">${t}</span>`).join('');
+        }
+
+        // Update 3D Geometry
+        if (GEOMETRIES[prod.geomType]) {
+          productMesh.geometry = GEOMETRIES[prod.geomType];
+        }
+
+        // Redraw Background Text
+        drawProductBgText();
+      }
+
+      // Next Product Button
+      document.getElementById('btn-next-product')?.addEventListener('click', () => {
+        selectProduct(currentProductIndex + 1);
+      });
+
+      // Tab Buttons Click
+      document.querySelectorAll('#prod-nav-bar .prod-nav-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-index') || '0', 10);
+          selectProduct(idx);
+        });
+      });
+
+      // Initialize Product UI
+      selectProduct(0);
+
+      // Global Resize Listener
+      window.addEventListener('resize', () => {
+        layoutHero();
+        if (isProductRevealed) {
+          layoutProductViewer();
+        }
+      });
+
+      // Reveal Exploration function
+      let isProductRevealed = false;
+
+      function revealAndScrollTo(targetId) {
+        const prodSec = document.getElementById('productos');
+        const footerSec = document.getElementById('contacto');
+
+        if (!isProductRevealed) {
+          isProductRevealed = true;
+          isProductVisible = true;
+          if (prodSec) prodSec.classList.add('revealed');
+          if (footerSec) footerSec.classList.add('revealed');
+
+          // Initialize / resize product viewer now that canvas is displayed
+          requestAnimationFrame(() => {
+            layoutProductViewer();
+            const targetEl = document.getElementById(targetId || 'productos');
+            targetEl?.scrollIntoView({ behavior: 'smooth' });
+          });
+        } else {
+          const targetEl = document.getElementById(targetId || 'productos');
+          targetEl?.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+
+      // Smooth scroll triggers
+      document.getElementById('cta-explore')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        revealAndScrollTo('productos');
+      });
+
+      document.querySelectorAll('a[href="#productos"]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          revealAndScrollTo('productos');
+        });
+      });
+
+      document.querySelectorAll('a[href="#contacto"]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          revealAndScrollTo('contacto');
+        });
+      });
+
+      document.querySelectorAll('a[href="#hero"]').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth' });
+        });
+      });
+
+      /* ========================================================
+         3. VISIBILITY OBSERVER & UNIFIED ANIMATION LOOP
+         ======================================================== */
+      let isHeroVisible = true;
+      let isProductVisible = false;
+
+      const heroElement = document.getElementById('hero');
+      const prodElement = document.getElementById('productos');
+
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.target === heroElement) {
+              isHeroVisible = entry.isIntersecting;
+            } else if (entry.target === prodElement) {
+              isProductVisible = entry.isIntersecting && isProductRevealed;
+            }
+          });
+        }, { threshold: 0.05 });
+
+        if (heroElement) observer.observe(heroElement);
+        if (prodElement) observer.observe(prodElement);
+      }
+
       let lastTime = performance.now();
 
       function animate(now) {
@@ -853,75 +2115,150 @@
         lastTime = now;
         const dt = Math.min(rawDt, 0.05);
 
-        if (isDragging) {
-          timeSinceInteraction = 0;
-          idleBlend = 0;
-        } else if (Math.abs(remainingArrowAngle) > 0.0005) {
-          timeSinceInteraction = 0;
-          idleBlend = 0;
-          velX = 0;
-          velY = 0;
-          const step = remainingArrowAngle * Math.min(1.0, 0.09 * dt * 60);
-          remainingArrowAngle -= step;
-          const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), step);
-          spinner.quaternion.premultiply(qY);
-        } else {
-          remainingArrowAngle = 0;
-          timeSinceInteraction += dt;
-
-          // Inertia
-          if (Math.abs(velX) > 1e-6 || Math.abs(velY) > 1e-6) {
-            const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), velX);
-            const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), velY);
-            spinner.quaternion.premultiply(qY);
-            spinner.quaternion.premultiply(qX);
-            const damp = Math.pow(0.94, dt * 60);
-            velX *= damp;
-            velY *= damp;
-          }
-
-          // Idle drift
-          if (timeSinceInteraction > 0.6) {
-            idleBlend = Math.min(1.0, idleBlend + dt / 1.0);
-          } else {
+        // 1. UPDATE HERO 3D SCENE IF VISIBLE
+        if (isHeroVisible) {
+          if (isDragging) {
+            timeSinceInteraction = 0;
             idleBlend = 0;
+          } else if (Math.abs(remainingArrowAngle) > 0.0005) {
+            timeSinceInteraction = 0;
+            idleBlend = 0;
+            velX = 0;
+            velY = 0;
+            const step = remainingArrowAngle * Math.min(1.0, 0.09 * dt * 60);
+            remainingArrowAngle -= step;
+            const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), step);
+            spinner.quaternion.premultiply(qY);
+          } else {
+            remainingArrowAngle = 0;
+            timeSinceInteraction += dt;
+
+            // Inertia
+            if (Math.abs(velX) > 1e-6 || Math.abs(velY) > 1e-6) {
+              const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), velX);
+              const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), velY);
+              spinner.quaternion.premultiply(qY);
+              spinner.quaternion.premultiply(qX);
+              const damp = Math.pow(0.94, dt * 60);
+              velX *= damp;
+              velY *= damp;
+            }
+
+            // Idle drift
+            if (timeSinceInteraction > 0.6) {
+              idleBlend = Math.min(1.0, idleBlend + dt / 1.0);
+            } else {
+              idleBlend = 0;
+            }
+
+            if (idleBlend > 0) {
+              const frameScale = dt * 60;
+              const idleY = 0.0035 * frameScale * idleBlend;
+              const idleX = 0.0012 * frameScale * idleBlend;
+              const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), idleY);
+              const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), idleX);
+              spinner.quaternion.premultiply(qY);
+              spinner.quaternion.premultiply(qX);
+            }
           }
 
-          if (idleBlend > 0) {
-            const frameScale = dt * 60;
-            const idleY = 0.0035 * frameScale * idleBlend;
-            const idleX = 0.0012 * frameScale * idleBlend;
-            const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), idleY);
-            const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), idleX);
-            spinner.quaternion.premultiply(qY);
-            spinner.quaternion.premultiply(qX);
-          }
+          // Update trailing particles in hero section
+          updateParticles(dt);
+
+          // Hero Render passes
+          renderer.setRenderTarget(rtBack);
+          renderer.clear();
+          renderer.render(bgScene, camera);
+          renderer.autoClear = false;
+          renderer.render(particleScene, camera);
+
+          renderer.setRenderTarget(rtFront);
+          renderer.clear();
+          renderer.render(bgScene, camera);
+          renderer.render(particleScene, camera);
+          cubeMesh.material = backMat;
+          renderer.render(scene, camera);
+
+          renderer.setRenderTarget(null);
+          renderer.clear();
+          renderer.render(bgScene, camera);
+          renderer.render(particleScene, camera);
+
+          renderer.clearDepth();
+          cubeMesh.material = frontMat;
+          renderer.render(scene, camera);
+          renderer.autoClear = true;
         }
 
-        // Render pipeline:
-        // 1) render bgScene -> rtBack
-        renderer.setRenderTarget(rtBack);
-        renderer.clear();
-        renderer.render(bgScene, camera);
+        // 2. UPDATE PRODUCT 3D SCENE IF VISIBLE
+        if (isProductVisible) {
+          if (prodDragging) {
+            prodTimeSinceInteraction = 0;
+            prodIdleBlend = 0;
+          } else if (Math.abs(prodRemainingSpin) > 0.0005) {
+            prodTimeSinceInteraction = 0;
+            prodIdleBlend = 0;
+            prodVelX = 0;
+            prodVelY = 0;
+            const pStep = prodRemainingSpin * Math.min(1.0, 0.08 * dt * 60);
+            prodRemainingSpin -= pStep;
+            const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), pStep);
+            prodSpinner.quaternion.premultiply(qY);
+          } else {
+            prodRemainingSpin = 0;
+            prodTimeSinceInteraction += dt;
 
-        // 2) render bgScene -> rtFront, then (autoClear=false) cube with backMat -> rtFront
-        renderer.setRenderTarget(rtFront);
-        renderer.clear();
-        renderer.render(bgScene, camera);
+            // Product Inertia
+            if (Math.abs(prodVelX) > 1e-6 || Math.abs(prodVelY) > 1e-6) {
+              const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), prodVelX);
+              const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), prodVelY);
+              prodSpinner.quaternion.premultiply(qY);
+              prodSpinner.quaternion.premultiply(qX);
+              const damp = Math.pow(0.94, dt * 60);
+              prodVelX *= damp;
+              prodVelY *= damp;
+            }
 
-        renderer.autoClear = false;
-        cubeMesh.material = backMat;
-        renderer.render(scene, camera);
+            // Product Idle Drift
+            if (prodTimeSinceInteraction > 0.6) {
+              prodIdleBlend = Math.min(1.0, prodIdleBlend + dt / 1.0);
+            } else {
+              prodIdleBlend = 0;
+            }
 
-        // 3) render bgScene -> screen, then (autoClear=false, clearDepth) cube with frontMat -> screen
-        renderer.setRenderTarget(null);
-        renderer.clear();
-        renderer.render(bgScene, camera);
+            if (prodIdleBlend > 0) {
+              const frameScale = dt * 60;
+              const pIdleY = 0.003 * frameScale * prodIdleBlend;
+              const pIdleX = 0.001 * frameScale * prodIdleBlend;
+              const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), pIdleY);
+              const qX = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pIdleX);
+              prodSpinner.quaternion.premultiply(qY);
+              prodSpinner.quaternion.premultiply(qX);
+            }
+          }
 
-        renderer.clearDepth();
-        cubeMesh.material = frontMat;
-        renderer.render(scene, camera);
-        renderer.autoClear = true;
+          // Product Render passes
+          prodRenderer.setRenderTarget(prodRtBack);
+          prodRenderer.clear();
+          prodRenderer.render(prodBgScene, prodCamera);
+
+          prodRenderer.setRenderTarget(prodRtFront);
+          prodRenderer.clear();
+          prodRenderer.render(prodBgScene, prodCamera);
+
+          prodRenderer.autoClear = false;
+          productMesh.material = prodBackMat;
+          prodRenderer.render(prodScene, prodCamera);
+
+          prodRenderer.setRenderTarget(null);
+          prodRenderer.clear();
+          prodRenderer.render(prodBgScene, prodCamera);
+
+          prodRenderer.clearDepth();
+          productMesh.material = prodFrontMat;
+          prodRenderer.render(prodScene, prodCamera);
+          prodRenderer.autoClear = true;
+        }
       }
 
       // Font loading race
@@ -932,7 +2269,8 @@
       ]);
 
       Promise.race([fontReady, fontTimeout]).then(() => {
-        layout();
+        layoutHero();
+        layoutProductViewer();
         lastTime = performance.now();
         requestAnimationFrame(animate);
       });
